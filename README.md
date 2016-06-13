@@ -1,5 +1,4 @@
 # frame-animation
-
 ###js实现帧动画的原理
 1.如果有多张帧图片，用一个image标签去承载图片，定时改变image的src属性
 

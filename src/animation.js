@@ -6,6 +6,7 @@
 'use strict';
 
 var loadImage = require('./imageloader');
+var Timeline = require('./timeline');
 
 //初始化状态
 var STATE_INITIAL = 0;
@@ -20,11 +21,21 @@ var TASK_SYNC = 0;
 var TASK_ASYNC = 1;
 
 /**
+ * 简单的函数封装，执行callback
+ * @param  {Function} callback [description]
+ * @return {Function}          [description]
+ */
+function next(callback) {
+    callback && callback();
+}
+
+/**
  * 帧动画类
  */
 function Animation() {
     this.taskQueue = [];
     this.index = 0;
+    this.timeline = new Timeline();
 
     this.state = STATE_INITIAL;
 }
@@ -51,7 +62,31 @@ Animation.prototype.loadImage = function(imglist) {
  * @return {[type]}           [description]
  */
 Animation.prototype.changePosition = function(ele, positions, imageUrl) {
+    var len = positions.length;
+    var taskFn;
+    var type;
+    if (len) {
+        var me = this;
+        taskFn = function(next, time) {
+            if (imageUrl) {
+                ele.style.backgroundImage = 'url(' + imageUrl + ')';
+            }
+            //获得当前位置图片背景的索引
+            var index = Math.min(time / me.interval | 0, len - 1);
+            var position = positions[index].split(' ');
+            //改变dom对象的背景图片位置
+            ele.style.backgroundPosition = position[0] + 'px ' + position[1] + 'px';
+            if (index === len - 1) {
+                next();
+            }
+            type = TASK_ASYNC;
+        }
+    } else {
+        taskFn = next;
+        type = TASK_SYNC;
+    }
 
+    return this._add(taskFn, type);
 }
 
 /**
@@ -61,7 +96,28 @@ Animation.prototype.changePosition = function(ele, positions, imageUrl) {
  * @return {[type]}         [description]
  */
 Animation.prototype.changeSrc = function(ele, imglist) {
+    var len = imglist.length;
+    var taskFn;
+    var type;
+    if (len) {
+        var me = this;
+        taskFn = function(next, time) {
+            //获得当前图片索引
+            var index = Math.min(time / me.interval | 0, len - 1);
+            //改变image对象的图片地址
+            ele.src = imglist[index];
+            if (index == len - 1) {
+                next();
+            }
+        }
+        type = TASK_ASYNC;
 
+    } else {
+        taskFn = next;
+        type = TASK_SYNC;
+    }
+
+    return _add(taskFn, type);
 }
 
 /**
@@ -70,7 +126,7 @@ Animation.prototype.changeSrc = function(ele, imglist) {
  * @return {[type]}        [description]
  */
 Animation.prototype.enterFrame = function(taskFn) {
-
+    return this._add(taskFn, TASK_ASYNC);
 }
 
 /**
@@ -79,7 +135,12 @@ Animation.prototype.enterFrame = function(taskFn) {
  * @return {[type]}            [description]
  */
 Animation.prototype.then = function(callback) {
-
+    var taskFn = function(next) {
+        callback();
+        next();
+    }
+    var type = TASK_SYNC;
+    return this._add(taskFn, type);
 }
 
 /**
@@ -109,7 +170,28 @@ Animation.prototype.start = function(interval) {
  * @return {[type]}       [description]
  */
 Animation.prototype.repeat = function(times) {
+    var me = this;
+    var taskFn = function() {
+        if (typeof times === 'undefined') {
+            //无限回退到上一个任务
+            me.index--;
+            me._runTask();
+            return;
+        }
+        if (times) {
+            times--;
+            //回退
+            me.index--;
+            me._runTask();
+        } else {
+            //达到重复次数,跳转到一个任务
+            var task = me.taskQueue[me.index];
+            me._next(task);
+        }
+    }
+    var type = TASK_SYNC;
 
+    return this._add(taskFn, type);
 }
 
 /**
@@ -117,7 +199,7 @@ Animation.prototype.repeat = function(times) {
  * @return {[type]} [description]
  */
 Animation.prototype.repeatForever = function() {
-
+    return this.repeat();
 }
 
 /**
@@ -126,7 +208,10 @@ Animation.prototype.repeatForever = function() {
  * @return {[type]}      [description]
  */
 Animation.prototype.wait = function(time) {
-
+    if (this.taskQueue && this.taskQueue.length > 0) {
+        this.taskQueue[this.taskQueue.length - 1] = time;
+    }
+    return this;
 }
 
 /**
@@ -134,7 +219,12 @@ Animation.prototype.wait = function(time) {
  * @return {[type]} [description]
  */
 Animation.prototype.pause = function() {
-
+	if(this.state === STATE_START){
+		this.state = STATE_STOP;
+		this.timeline.stop();
+		return this;
+	}
+	return this;
 }
 
 /**
@@ -142,7 +232,12 @@ Animation.prototype.pause = function() {
  * @return {[type]} [description]
  */
 Animation.prototype.restart = function() {
-
+	if(this.state === STATE_STOP){
+		this.state = STATE_START;
+		this.timeline.restart();
+		return this;
+	}
+	return this;
 }
 
 /**
@@ -150,7 +245,14 @@ Animation.prototype.restart = function() {
  * @return {[type]} [description]
  */
 Animation.prototype.dispose = function() {
-
+	if(this.state!==STATE_INITIAL){
+		this.state = STATE_INITIAL;
+		this.taskQueue = null;
+		this.timeline.stop();
+		this.timeline = null;
+		return this;
+	}
+	return this;
 }
 
 /**
@@ -194,14 +296,14 @@ Animation.prototype._runTask = function() {
  * @param  {[type]} task [description]
  * @return {[type]}      [description]
  */
-Animation.prototype._syncTask = function(task){
-	var me = this;
-	var next = function(){
-		//切换到下一个任务
-		me._next();
-	};
-	var taskFn = task.taskFn;
-	taskFn(next);
+Animation.prototype._syncTask = function(task) {
+    var me = this;
+    var next = function() {
+        //切换到下一个任务
+        me._next();
+    };
+    var taskFn = task.taskFn;
+    taskFn(next);
 }
 
 /**
@@ -209,15 +311,33 @@ Animation.prototype._syncTask = function(task){
  * @param  {[type]} task [description]
  * @return {[type]}      [description]
  */
-Animation.prototype._asyncTask = function(task){
-	
+Animation.prototype._asyncTask = function(task) {
+    var me = this;
+    //定义每一帧执行的回调函数
+    var enterFrame = function(time) {
+        var taskFn = task.taskFn;
+        var next = function() {
+            //停止当前任务
+            me.timeline.stop();
+            //执行下一个任务
+            me._next(task);
+        }
+        taskFn(next, time);
+    }
+
+    this.timeline.onenterframe = enterFrame;
+    this.timeline.start(this.interval);
 }
 
 /**
- * 切换到下一个任务
- * @return {[type]} [description]
+ * 切换到下一个任务,支持如果当前任务需要等待，则延时执行
+ * @param  {[type]} task [description]
+ * @return {[type]}      [description]
  */
-Animation.prototype._next = function(){
-	this.index++;
-	this._runTask();
+Animation.prototype._next = function(task) {
+    this.index++;
+    var me = this;
+    task.wait ? setTimeout(function(){
+    	me._runTask();
+    }, task.wait) : this._runTask();
 }

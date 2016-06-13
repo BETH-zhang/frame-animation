@@ -210,7 +210,7 @@ Animation.prototype._syncTask = function(task){
  * @return {[type]}      [description]
  */
 Animation.prototype._asyncTask = function(task){
-
+	
 }
 
 /**

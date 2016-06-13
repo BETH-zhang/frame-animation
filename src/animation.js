@@ -209,7 +209,7 @@ Animation.prototype.repeatForever = function() {
  */
 Animation.prototype.wait = function(time) {
     if (this.taskQueue && this.taskQueue.length > 0) {
-        this.taskQueue[this.taskQueue.length - 1] = time;
+        this.taskQueue[this.taskQueue.length - 1].wait = time;
     }
     return this;
 }
@@ -300,7 +300,7 @@ Animation.prototype._syncTask = function(task) {
     var me = this;
     var next = function() {
         //切换到下一个任务
-        me._next();
+        me._next(task);
     };
     var taskFn = task.taskFn;
     taskFn(next);

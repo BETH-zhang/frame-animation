@@ -265,7 +265,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 	Animation.prototype.wait = function(time) {
 	    if (this.taskQueue && this.taskQueue.length > 0) {
-	        this.taskQueue[this.taskQueue.length - 1] = time;
+	        this.taskQueue[this.taskQueue.length - 1].wait = time;
 	    }
 	    return this;
 	}
@@ -356,7 +356,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var me = this;
 	    var next = function() {
 	        //切换到下一个任务
-	        me._next();
+	        me._next(task);
 	    };
 	    var taskFn = task.taskFn;
 	    taskFn(next);
@@ -455,7 +455,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        //设置图片元素的id
 	        item.id = '__img__' + key + getId();
 	        //设置图片元素的img，它是一个Image对象
-	        item.img = window[item.id] = new image();
+	        item.img = window[item.id] = new Image();
 
 	        doLoad(item);
 	    }
@@ -670,7 +670,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 
-	module.exports = timeline;
+	module.exports = Timeline;
 
 /***/ }
 /******/ ])

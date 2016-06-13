@@ -47,7 +47,7 @@ function loadImage(images, callback, timeout) {
         //设置图片元素的id
         item.id = '__img__' + key + getId();
         //设置图片元素的img，它是一个Image对象
-        item.img = window[item.id] = new image();
+        item.img = window[item.id] = new Image();
 
         doLoad(item);
     }

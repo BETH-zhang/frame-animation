@@ -133,4 +133,4 @@ function startTimeline(timeline, startTime) {
 }
 
 
-module.exports = timeline;
+module.exports = Timeline;

@@ -1,0 +1,19 @@
+{
+  "name": "frame-animation",
+  "version": "1.0.0",
+  "description": "###js实现帧动画的原理 1.如果有多张帧图片，用一个image标签去承载图片，定时改变image的src属性",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BETH-zhang/frame-animation.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BETH-zhang/frame-animation/issues"
+  },
+  "homepage": "https://github.com/BETH-zhang/frame-animation#readme"
+}

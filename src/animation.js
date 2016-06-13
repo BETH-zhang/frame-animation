@@ -341,3 +341,7 @@ Animation.prototype._next = function(task) {
     	me._runTask();
     }, task.wait) : this._runTask();
 }
+
+module.exports = function(){
+	return new Animation();
+}
